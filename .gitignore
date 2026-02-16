@@ -1,4 +1,5 @@
-# Virtual environment
-polyp_env/
-venv/
-
+runs/
+datasets/
+*.pt
+*.pth
+__pycache__/
