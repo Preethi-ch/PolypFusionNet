@@ -1,5 +1,7 @@
-runs/
-datasets/
-*.pt
-*.pth
+venv/
+.venv/
+env/
 __pycache__/
+*.pyc
+runs/
+results/
