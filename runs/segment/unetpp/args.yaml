@@ -1,0 +1,8 @@
+batch_size: 2
+device: cpu
+encoder: resnet18
+learning_rate: 0.0001
+max_epochs: 50
+model: UNet++
+patience: 5
+resume_supported: true
