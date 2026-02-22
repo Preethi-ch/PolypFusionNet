@@ -1,0 +1,2 @@
+Training time (hours): 2.04
+Best validation loss: 0.2977
