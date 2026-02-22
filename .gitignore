@@ -1,4 +1,15 @@
-# Virtual environment
-polyp_env/
+# Virtual environments
 venv/
+.venv/
+env/
 
+# Python cache
+__pycache__/
+*.pyc
+
+# Ignore only weights inside runs
+runs/*/weights/
+
+# Optional: ignore other heavy result folders
+results/
+polyp_env/
