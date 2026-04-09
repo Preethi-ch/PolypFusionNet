@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 from ultralytics import YOLO
 
-# ================= PATH SETUP =================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 
@@ -15,10 +14,9 @@ VAL_LABEL_DIR = os.path.join(PROJECT_ROOT, "datasets", "labels", "val")
 RUN_DIR = os.path.join(PROJECT_ROOT, "runs", "segment", "yolov8n_train")
 WEIGHTS_PATH = os.path.join(RUN_DIR, "weights", "best.pt")
 
-# ================= LOAD MODEL =================
 model = YOLO(WEIGHTS_PATH)
 
-# ================= MODEL PARAMETER INFO =================
+
 def count_total_params(model):
     return sum(p.numel() for p in model.parameters())
 
@@ -37,7 +35,6 @@ print("Total Parameters:", total_params)
 print("Trainable Parameters:", trainable_params)
 print("Model Size (MB):", round(model_size, 2))
 
-# ================= HELPERS =================
 def is_image_file(fname):
     return fname.lower().endswith((".jpg", ".jpeg", ".png", ".bmp"))
 
@@ -65,7 +62,7 @@ def dice(pred, gt):
 def iou(pred, gt):
     return (pred & gt).sum() / ((pred | gt).sum() + 1e-6)
 
-# ================= EVALUATION =================
+
 dice_l, iou_l, prec_l, rec_l, f1_l, acc_l, time_l = [], [], [], [], [], [], []
 
 for fname in sorted(os.listdir(VAL_IMG_DIR)):
@@ -115,7 +112,7 @@ for fname in sorted(os.listdir(VAL_IMG_DIR)):
     acc_l.append(acc)
     time_l.append(infer_time)
 
-# ================= SAVE RESULTS =================
+
 results = {
     "Total_Parameters": total_params,
     "Trainable_Parameters": trainable_params,

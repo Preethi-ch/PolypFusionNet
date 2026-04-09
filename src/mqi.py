@@ -1,71 +1,73 @@
-import os
-import csv
 import cv2
 import numpy as np
+import os
+import csv
 
-LABEL_DIR = "runs/segment/predict_masks/labels"
-OUTPUT_CSV = "results/mqi_scores.csv"
-IMG_SIZE = 640
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(BASE_DIR)
 
-os.makedirs("results", exist_ok=True)
+MASK_DIR = os.path.join(
+    PROJECT_ROOT, "runs", "segment", "predict_with_binary", "binary_masks"
+)
+
+RESULT_DIR = os.path.join(PROJECT_ROOT, "results")
+os.makedirs(RESULT_DIR, exist_ok=True)
+
+CSV_PATH = os.path.join(RESULT_DIR, "mqi_results.csv")
 
 
-def polygon_to_mask(points):
-    mask = np.zeros((IMG_SIZE, IMG_SIZE), dtype=np.uint8)
-    pts = np.array(points, dtype=np.int32)
-    cv2.fillPoly(mask, [pts], 255)
-    return mask
+
+def preprocess_mask(mask):
+    binary = (mask > 0).astype(np.uint8) * 255
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(binary)
+    if num_labels <= 1:
+        return binary
+    largest_label = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])
+    cleaned = np.zeros_like(binary)
+    cleaned[labels == largest_label] = 255
+    return cleaned
+
+def compute_area_score(binary):
+    area = np.sum(binary == 255)
+    img_area = binary.shape[0] * binary.shape[1]
+    return min((area / (img_area + 1e-6)) * 5, 1.0)
+
+def compute_smoothness_score(binary):
+    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        return 0.0
+    cnt = max(contours, key=cv2.contourArea)
+    area = cv2.contourArea(cnt)
+    perimeter = cv2.arcLength(cnt, True)
+    if perimeter==0:
+        return 0.0
+    return min((4 * np.pi * area) / (perimeter**2 + 1e-6), 1.0)
+
+def compute_hole_score(binary):
+    flood = binary.copy()
+    h, w = binary.shape
+    mask = np.zeros((h+2, w+2), np.uint8)
+    cv2.floodFill(flood, mask, (0, 0), 255)
+    holes = cv2.bitwise_not(flood) & binary
+    hole_ratio = np.sum(holes == 255) / (np.sum(binary == 255) + 1e-6)
+    return max(1 - hole_ratio, 0)
+
+def compute_mqi(mask):
+    binary = preprocess_mask(mask)
+    mqi = (
+        0.3 * compute_area_score(binary) +
+        0.5 * compute_smoothness_score(binary) +
+        0.2 * compute_hole_score(binary)
+    )
+    if mqi >= 0.75:
+        quality = "Good"
+    elif mqi >= 0.5:
+        quality = "Needs_Repair"
+    else:
+        quality = "Reject"
+    return round(mqi, 3), quality
 
 
-with open(OUTPUT_CSV, "w", newline="") as f:
-    writer = csv.writer(f)
-    writer.writerow(["Image", "Area", "Perimeter", "Compactness", "MQI"])
 
-    for label_file in os.listdir(LABEL_DIR):
-        if not label_file.endswith(".txt"):
-            continue
-
-        with open(os.path.join(LABEL_DIR, label_file)) as lf:
-            lines = lf.readlines()
-
-        for line in lines:
-            data = line.strip().split()
-            if len(data) < 7:
-                continue
-
-            coords = list(map(float, data[1:]))
-
-            if len(coords) % 2 != 0:
-                coords = coords[:-1]
-
-            points = []
-            for i in range(0, len(coords), 2):
-                x = int(coords[i] * IMG_SIZE)
-                y = int(coords[i + 1] * IMG_SIZE)
-                points.append((x, y))
-
-            if len(points) < 3:
-                continue
-
-            mask = polygon_to_mask(points)
-
-            area = cv2.countNonZero(mask)
-            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            perimeter = cv2.arcLength(contours[0], True)
-
-            if perimeter == 0:
-                continue
-
-            compactness = (4 * np.pi * area) / (perimeter ** 2)
-            mqi = min(compactness, 1.0)
-
-            writer.writerow([
-                label_file.replace(".txt", ".jpg"),
-                area,
-                round(perimeter, 2),
-                round(compactness, 4),
-                round(mqi, 4)
-            ])
-
-print(" MQI computation completed.")
-print(f" Results saved at: {OUTPUT_CSV}")
+def compute_mqi_from_mask(mask):
+    return compute_mqi(mask)

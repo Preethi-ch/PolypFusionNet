@@ -7,7 +7,7 @@ import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 import segmentation_models_pytorch as smp
 
-# ================= PATHS =================
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 
@@ -20,7 +20,7 @@ OUT_CSV = os.path.join(RUN_DIR, "eval_metrics.csv")
 
 DEVICE = torch.device("cpu")
 
-# ================= DATASET =================
+
 class PolypDataset(Dataset):
     def __init__(self, img_dir, mask_dir):
         self.images = sorted(os.listdir(img_dir))
@@ -44,7 +44,7 @@ class PolypDataset(Dataset):
 
         return torch.tensor(img), torch.tensor(mask)
 
-# ================= MODEL =================
+
 model = smp.Unet(
     encoder_name="resnet18",
     encoder_weights=None,
@@ -57,7 +57,6 @@ model.load_state_dict(torch.load(WEIGHT_PATH, map_location=DEVICE))
 model.to(DEVICE)
 model.eval()
 
-# ================= PARAMETER INFO =================
 def count_total_params(model):
     return sum(p.numel() for p in model.parameters())
 
@@ -76,7 +75,6 @@ print("Total Parameters:", total_params)
 print("Trainable Parameters:", trainable_params)
 print("Model Size (MB):", round(model_size, 2))
 
-# ================= METRICS =================
 def dice(pred, gt):
     smooth = 1e-6
     return (2 * (pred * gt).sum() + smooth) / (pred.sum() + gt.sum() + smooth)
@@ -86,7 +84,7 @@ def iou(pred, gt):
     union = (pred | gt).sum()
     return inter / (union + 1e-6)
 
-# ================= EVALUATION =================
+
 loader = DataLoader(PolypDataset(VAL_IMG, VAL_MASK), batch_size=1)
 
 dice_l, iou_l, prec_l, rec_l, f1_l, acc_l, time_l = [], [], [], [], [], [], []
@@ -121,7 +119,6 @@ with torch.no_grad():
         acc_l.append(acc)
         time_l.append(infer_time)
 
-# ================= SAVE =================
 results = {
     "Total_Parameters": total_params,
     "Trainable_Parameters": trainable_params,
