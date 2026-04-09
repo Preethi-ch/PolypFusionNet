@@ -1,13 +1,10 @@
 import pandas as pd
 from pathlib import Path
 
-# Project root (PolyFusionNet)
 ROOT = Path(__file__).resolve().parent.parent
 
-# Runs directory
 BASE = ROOT / "runs" / "segment"
 
-# Results directory (already exists)
 RESULTS_DIR = ROOT / "results"
 
 def load_last_row(csv_path):
@@ -42,7 +39,6 @@ for name, path in models.items():
 
 comparison = pd.DataFrame(rows)
 
-# Save INSIDE results folder
 out_path = RESULTS_DIR / "lightweight_comparison.csv"
 comparison.to_csv(out_path, index=False)
 

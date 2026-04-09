@@ -10,9 +10,9 @@ from torch.utils.data import Dataset, DataLoader
 import segmentation_models_pytorch as smp
 import torch.nn as nn
 
-# ================== BASE PATH SETUP ==================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))      # src/
-PROJECT_ROOT = os.path.dirname(BASE_DIR)                   # PolyFusionNet/
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))      
+PROJECT_ROOT = os.path.dirname(BASE_DIR)                  
 
 DATASET_ROOT = os.path.join(PROJECT_ROOT, "datasets", "unet_data")
 
@@ -21,7 +21,6 @@ MASK_DIR_TRAIN = os.path.join(DATASET_ROOT, "train", "masks")
 IMG_DIR_VAL = os.path.join(DATASET_ROOT, "val", "images")
 MASK_DIR_VAL = os.path.join(DATASET_ROOT, "val", "masks")
 
-# ================== EXP CONFIG ==================
 EXP_NAME = "unetpp"
 RUN_DIR = os.path.join(PROJECT_ROOT, "runs", "segment", EXP_NAME)
 WEIGHTS_DIR = os.path.join(RUN_DIR, "weights")
@@ -33,13 +32,13 @@ MAX_EPOCHS = 50
 PATIENCE = 5
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-# Create directories
+
 os.makedirs(WEIGHTS_DIR, exist_ok=True)
 
 print("Train Images:", IMG_DIR_TRAIN)
 print("Val Images:", IMG_DIR_VAL)
 
-# ================== SAVE ARGS ==================
+
 args = {
     "model": "UNet++",
     "encoder": "resnet18",
@@ -54,7 +53,7 @@ args = {
 with open(os.path.join(RUN_DIR, "args.yaml"), "w") as f:
     yaml.dump(args, f)
 
-# ================== DATASET ==================
+
 class PolypDataset(Dataset):
     def __init__(self, img_dir, mask_dir, augment=False):
         self.images = sorted(os.listdir(img_dir))
@@ -90,7 +89,7 @@ class PolypDataset(Dataset):
 
         return torch.tensor(img), torch.tensor(mask)
 
-# ================== MODEL ==================
+
 model = smp.UnetPlusPlus(
     encoder_name="resnet18",
     encoder_weights="imagenet",
@@ -99,7 +98,7 @@ model = smp.UnetPlusPlus(
     activation="sigmoid"
 ).to(DEVICE)
 
-# ================== LOSS ==================
+
 bce = nn.BCELoss()
 
 def dice_loss(pred, target):
@@ -110,7 +109,7 @@ def dice_loss(pred, target):
 def loss_fn(pred, target):
     return bce(pred, target) + dice_loss(pred, target)
 
-# ================== DATA LOADERS ==================
+
 train_ds = PolypDataset(IMG_DIR_TRAIN, MASK_DIR_TRAIN, augment=True)
 val_ds = PolypDataset(IMG_DIR_VAL, MASK_DIR_VAL, augment=False)
 
@@ -119,7 +118,7 @@ val_loader = DataLoader(val_ds, batch_size=BATCH_SIZE)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
-# ================== RESUME SUPPORT ==================
+
 start_epoch = 1
 best_val = float("inf")
 results = []
@@ -134,7 +133,7 @@ if os.path.exists(CKPT_PATH):
 else:
     print("🆕 Starting from scratch")
 
-# ================== TRAIN LOOP ==================
+
 counter = 0
 start_time = time.time()
 
@@ -169,7 +168,7 @@ for epoch in range(start_epoch, MAX_EPOCHS + 1):
 
     print(f"Epoch {epoch:02d}/{MAX_EPOCHS} | Train {train_loss:.4f} | Val {val_loss:.4f}")
 
-    # Save best
+   
     if val_loss < best_val:
         best_val = val_loss
         counter = 0
@@ -177,7 +176,7 @@ for epoch in range(start_epoch, MAX_EPOCHS + 1):
     else:
         counter += 1
 
-    # Save checkpoint
+    
     torch.save({
         "epoch": epoch,
         "model": model.state_dict(),
@@ -189,7 +188,7 @@ for epoch in range(start_epoch, MAX_EPOCHS + 1):
         print("⏹ Early stopping triggered")
         break
 
-# ================== SAVE RESULTS ==================
+
 df = pd.DataFrame(results, columns=["epoch", "train_loss", "val_loss"])
 df.to_csv(os.path.join(RUN_DIR, "results.csv"), index=False)
 

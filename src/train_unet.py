@@ -10,16 +10,14 @@ from torch.utils.data import Dataset, DataLoader
 import segmentation_models_pytorch as smp
 import torch.nn as nn
 
-# ================== PROJECT ROOT ==================
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# ================== EXP CONFIG ==================
 EXP_NAME = "unet"
 RUN_DIR = os.path.join(PROJECT_ROOT, "runs", "segment", EXP_NAME)
 WEIGHTS_DIR = os.path.join(RUN_DIR, "weights")
 CKPT_PATH = os.path.join(WEIGHTS_DIR, "last_checkpoint.pth")
 
-# Dataset path (inside datasets folder)
+
 IMG_DIR_TRAIN = os.path.join(PROJECT_ROOT, "datasets", "unet_data", "train", "images")
 MASK_DIR_TRAIN = os.path.join(PROJECT_ROOT, "datasets", "unet_data", "train", "masks")
 
@@ -34,7 +32,6 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 os.makedirs(WEIGHTS_DIR, exist_ok=True)
 
-# ================== SAVE ARGS ==================
 args = {
     "model": "U-Net",
     "encoder": "resnet18",
@@ -50,7 +47,6 @@ args = {
 with open(os.path.join(RUN_DIR, "args.yaml"), "w") as f:
     yaml.dump(args, f)
 
-# ================== DATASET ==================
 class PolypDataset(Dataset):
     def __init__(self, img_dir, mask_dir, augment=False):
         self.images = sorted(os.listdir(img_dir))
@@ -89,7 +85,7 @@ class PolypDataset(Dataset):
 
         return torch.tensor(img), torch.tensor(mask)
 
-# ================== MODEL ==================
+
 model = smp.Unet(
     encoder_name="resnet18",
     encoder_weights="imagenet",
@@ -98,7 +94,7 @@ model = smp.Unet(
     activation="sigmoid"
 ).to(DEVICE)
 
-# ================== LOSS ==================
+
 bce = nn.BCELoss()
 
 def dice_loss(pred, target):
@@ -109,7 +105,7 @@ def dice_loss(pred, target):
 def loss_fn(pred, target):
     return bce(pred, target) + dice_loss(pred, target)
 
-# ================== DATA LOADERS ==================
+
 train_ds = PolypDataset(IMG_DIR_TRAIN, MASK_DIR_TRAIN, augment=True)
 val_ds = PolypDataset(IMG_DIR_VAL, MASK_DIR_VAL, augment=False)
 
@@ -118,7 +114,6 @@ val_loader = DataLoader(val_ds, batch_size=BATCH_SIZE)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
-# ================== RESUME LOGIC ==================
 start_epoch = 1
 best_val = float("inf")
 results = []
@@ -133,7 +128,7 @@ if os.path.exists(CKPT_PATH):
 else:
     print("🆕 Starting training from scratch")
 
-# ================== TRAINING LOOP ==================
+
 counter = 0
 start_time = time.time()
 
@@ -185,7 +180,7 @@ for epoch in range(start_epoch, MAX_EPOCHS + 1):
         print("⏹ Early stopping triggered")
         break
 
-# ================== SAVE RESULTS ==================
+
 df = pd.DataFrame(results, columns=["epoch", "train_loss", "val_loss"])
 df.to_csv(os.path.join(RUN_DIR, "results.csv"), index=False)
 
